@@ -3,6 +3,7 @@ import os
 import requests
 from tqdm import tqdm
 from colorama import init, Fore, Style
+from requests_toolbelt.multipart.encoder import MultipartEncoder, MultipartEncoderMonitor
 from requests.auth import HTTPBasicAuth
 
 # Initialize colorama
@@ -25,27 +26,26 @@ def upload_file(file_path, api_key, file_index=None, total_files=None):
             print(f"{Fore.BLUE}-> [{file_index}/{total_files}] {os.path.basename(file_path)}{Style.RESET_ALL}")
 
         with open(file_path, 'rb') as f:
-            pbar = tqdm(total=file_size, unit='B', unit_scale=True, desc=f"{Fore.YELLOW}Uploading{Style.RESET_ALL}", ascii=True, leave=True)
-            
-            class TqdmFile:
-                def __init__(self, f, pbar):
-                    self.f = f
-                    self.pbar = pbar
-                def read(self, n=-1):
-                    data = self.f.read(n)
-                    self.pbar.update(len(data))
-                    return data
-                def __getattr__(self, attr):
-                    return getattr(self.f, attr)
+            encoder = MultipartEncoder(
+                fields={'file': (os.path.basename(file_path), f, 'application/octet-stream')}
+            )
 
-            tf = TqdmFile(f, pbar)
-            auth = HTTPBasicAuth('', api_key)
+            pbar = tqdm(total=file_size, unit='B', unit_scale=True, desc=f"{Fore.YELLOW}Uploading{Style.RESET_ALL}", ascii=True, leave=True)
+
+            def progress_callback(monitor):
+                pbar.update(monitor.bytes_read - pbar.n)
+
+            monitor = MultipartEncoderMonitor(encoder, progress_callback)
+
             response = requests.post(
                 PIXELDRAIN_UPLOAD_URL,
-                auth=auth,
-                files={'file': (os.path.basename(file_path), tf)}
+                auth=HTTPBasicAuth('', api_key),
+                data=monitor,
+                headers={'Content-Type': monitor.content_type}
             )
+
             pbar.close()
+
 
         # Check response status
         if response.status_code == 201:
