@@ -1,7 +1,7 @@
 # Pixeldrain
 ![image](https://i.postimg.cc/50y4ydnf/image.png)
 
-A python Pixeldrain client. You can upload files or entire folders to Pixeldrain (using your api, providing a simple command-line interface with progress tracking and optional logging of download links.
+A python Pixeldrain client. You can upload files or entire folders to Pixeldrain (using your api), providing a simple command-line interface with progress tracking and optional logging of download links.
 
 ## Dependencies
 
