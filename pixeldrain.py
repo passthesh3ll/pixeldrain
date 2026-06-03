@@ -11,7 +11,7 @@ init()
 
 PIXELDRAIN_UPLOAD_URL = "https://pixeldrain.com/api/file"
 
-def upload_file(file_path, api_key, file_index=None, total_files=None):
+def upload_file(file_path, api_key, file_index=None, total_files=None, log_path=None):
     if not os.path.isfile(file_path):
         print(f"{Fore.RED}Error: File '{file_path}' does not exist.{Style.RESET_ALL}")
         return None
@@ -46,19 +46,16 @@ def upload_file(file_path, api_key, file_index=None, total_files=None):
 
             pbar.close()
 
-
         # Check response status
         if response.status_code == 201:
             data = response.json()
             download_link = f"https://pixeldrain.com/u/{data['id']}"
             print(f"{Fore.GREEN}{download_link}{Style.RESET_ALL}\n")
             
-            if args.log:
-                output_dir = os.path.dirname(file_path) if os.path.isfile(file_path) else file_path
-                filename = os.path.basename(file_path)
-                log_file_path = os.path.join(output_dir, f"{os.path.splitext(filename)[0]}_links.txt")
+            # Save to log file if path provided
+            if log_path:
                 try:
-                    with open(log_file_path, 'w', encoding='utf-8') as log_file:
+                    with open(log_path, 'w', encoding='utf-8') as log_file:
                         log_file.write(f"{download_link}\n")
                 except Exception as e:
                     print(f"{Fore.RED}Error saving link to file: {str(e)}{Style.RESET_ALL}")
@@ -77,16 +74,26 @@ def upload_file(file_path, api_key, file_index=None, total_files=None):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Upload files or folders to Pixeldrain")
     parser.add_argument("path", help="Path to the file or folder to upload")
-    parser.add_argument("--log", action="store_true", help="Save upload links to individual <filename>_links.txt files")
+    parser.add_argument("--log", action="store_true", help="Save upload links to _links.txt files")
     parser.add_argument("--api-key", required=True, help="Pixeldrain API key")
     args = parser.parse_args()
 
     upload_results = []
 
+    # Single file mode
     if os.path.isfile(args.path):
-        result = upload_file(args.path, args.api_key)
+        # Prepare log path for single file: <filename>_links.txt
+        log_path = None
+        if args.log:
+            output_dir = os.path.dirname(args.path) if os.path.dirname(args.path) else '.'
+            filename = os.path.basename(args.path)
+            log_path = os.path.join(output_dir, f"{os.path.splitext(filename)[0]}_links.txt")
+            
+        result = upload_file(args.path, args.api_key, log_path=log_path)
         if result:
             upload_results.append(result)
+
+    # Folder mode
     elif os.path.isdir(args.path):
         files = [os.path.join(args.path, f) for f in os.listdir(args.path) if os.path.isfile(os.path.join(args.path, f))]
         total_files = len(files)
@@ -94,6 +101,25 @@ if __name__ == "__main__":
             result = upload_file(file_path, args.api_key, index, total_files)
             if result:
                 upload_results.append(result)
+        
+        # Create single log file for entire folder: <foldername>_links.txt
+        if args.log and upload_results:
+            folder_path = os.path.normpath(args.path)
+            folder_name = os.path.basename(folder_path)
+            
+            # Handle case where path is '.' or ends with separator
+            if not folder_name or folder_name == '.':
+                folder_name = os.path.basename(os.getcwd())
+            
+            parent_dir = os.path.dirname(folder_path) if os.path.dirname(folder_path) else '.'
+            folder_log_path = os.path.join(parent_dir, f"{folder_name}_links.txt")
+            
+            try:
+                with open(folder_log_path, 'w', encoding='utf-8') as log_file:
+                    for result in upload_results:
+                        log_file.write(f"{result['link']} - {result['filename']}\n")
+            except Exception as e:
+                print(f"{Fore.RED}Error saving links file: {str(e)}{Style.RESET_ALL}")
     else:
         print(f"{Fore.RED}Error: '{args.path}' is neither a file nor a directory.{Style.RESET_ALL}")
         exit(1)
