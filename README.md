@@ -32,17 +32,23 @@ python pixeldrain.py /path/to/dir/ --api-key <API-KEY>
 ## Help
 
 ```bash
-usage: pixeldrain.py [-h] [--log] --api-key API_KEY path
+usage: pixeldrain.py [-h] [--log] --api-key API_KEY [--wait WAIT] [--proxy [PROXY]]
+                     [--parallel PARALLEL]
+                     path
 
 Upload files or folders to Pixeldrain
 
 positional arguments:
-  path               Path to the file or folder to upload
+  path                 Path to the file or folder to upload
 
 options:
-  -h, --help         show this help message and exit
-  --log              Save upload links to individual <filename>_links.txt files
-  --api-key API_KEY  Pixeldrain API key
+  -h, --help           show this help message and exit
+  --log                Save upload links to _links.txt files
+  --api-key API_KEY    Pixeldrain API key
+  --wait WAIT          Seconds to wait between uploads (default: 0)
+  --proxy [PROXY]      Use proxy (default if empty: socks5://127.0.0.1:9050, or specify
+                       custom proxy URL)
+  --parallel PARALLEL  Number of parallel uploads (default: 1)
 ```
 
 
